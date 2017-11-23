@@ -5,7 +5,7 @@ import re
 from datetime import date
 """
 cd scrapy_seloger
-scrapy crawl paris_sale -o paris_sale.csv -a url=https://www.urltoscrape1.com -a max_pages=2
+scrapy crawl paris_sale -o paris_sale.csv -a url=https://www.urltoscrape1.com
 """
 
 class ParisSaleSpider(scrapy.Spider):
@@ -19,12 +19,6 @@ class ParisSaleSpider(scrapy.Spider):
         yield scrapy.Request(url, self.parse)
 
     def parse(self, response):
-        # Limit the length of the scraping
-        max_pages = getattr(self, 'max_pages', None)
-        try:
-            max_pages = int(max_pages)
-        except:
-            max_pages = None
 
         # Total number of results
         response_num_results = response.xpath('//div[@class="title_nbresult"]/text()').extract_first()
@@ -32,7 +26,6 @@ class ParisSaleSpider(scrapy.Spider):
             return "\tGET returned {}:\n\tcrawling spotted by www.seloger.com".format(response.url)
 
         num_results_ls = re.findall("(\d*)", response_num_results)
-        num_results = int("".join(num_results_ls))
 
         # Get listed properties
         properties = response.xpath(".//div[contains(@class, 'cartouche')]")
@@ -52,7 +45,7 @@ class ParisSaleSpider(scrapy.Spider):
                 price = None
 
             attrs_results = property.xpath('.//div[@class="c-pa-criterion"]/em/text()').extract()
-            attrs_dict = {}
+            attrs_dict = {'chb': None, 'p': None, 'asc': 0, 'balc': 0}
             for attr in attrs_results:
                 res = re.search("(\d*)\s+(\w+)", attr)
                 attrs_dict[res.group(2)] = res.group(1)
@@ -65,21 +58,11 @@ class ParisSaleSpider(scrapy.Spider):
 
         # Extract next page url if exists
         next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
-        if next_url:  # Check if there is a next page
-            if not max_pages:
-                print("\tFetched {} out of {} total properties.".format(self.property_counter, num_results))
-                self.property_counter += 1
-                yield Request(url=next_url, callback=self.parse)
-            elif self.page_counter <= max_pages:
-                print("\tFetched {} out of {} total properties.".format(self.property_counter, num_results))
-                self.property_counter += 1
-                self.page_counter += 1
-                yield Request(url=next_url, callback=self.parse)
-            else:
-                print("\n\tPAGE LIMIT REACHED")
-                pass
+        if next_url:
+            yield Request(url=next_url, callback=self.parse)
         else:
             print("\n\tLAST PAGE REACHED")
+
 
     def parse_page(self, response):
 
@@ -107,5 +90,6 @@ class ParisSaleSpider(scrapy.Spider):
         results['latitude'] = lat
         results['longitude'] = lng
         [results.pop(k) for k in ['download_latency', 'download_slot', 'depth', 'download_timeout']]
+        results['sqm'] = results.pop('m²')
 
         yield results
