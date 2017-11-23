@@ -2,11 +2,15 @@
 import scrapy
 from scrapy import Request
 import re
+"""
+cd scrapy_seloger
+scrapy crawl paris_sale -o paris_sale.csv urls=https://www.urltoscrape1.com;https://www.urltoscrape2.com
+"""
 
 class ParisSaleSpider(scrapy.Spider):
     name = 'paris_sale'
     allowed_domains = ['www.seloger.com']
-    #start_urls = list(input("Type url to scrape:\nurl > "))
+    
     start_urls = ['http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750114&tri=initial&pxmax=305000']#['http://www.seloger.com/list.htm?org=advanced_search&idtt=2&idtypebien=1&cp=75&tri=initial&naturebien=1,2,4']
 
     def parse(self, response):
@@ -21,38 +25,38 @@ class ParisSaleSpider(scrapy.Spider):
         print("\tTotal number of results: {}".format(num_results))
 
         # Get listed properties
-        properties = response.xpath('//section[@class="liste_resultat"]')
+        properties = response.xpath(".//div[contains(@class, 'cartouche')]")
 
         for property in properties:
-            box = property.xpath('//div[@class="c-pa-list c-pa-sl c-pa-gold cartouche "]')
-            if box:
-                ad_id = box.xpath('.//@id').extract_all()
 
-            container = property.xpath('.//div[@class="c-pa-info"]')
-            cpa = container.xpath('.//a[@class="c-pa-link"]')
-            link = cpa.xpath('.//@href').extract_first()
-            property_type = cpa.xpath('.//text()').extract_first()
-            price_result = container.xpath('.//span[@class="c-pa-cprice"]/text()').extract_first()
-            price_str_ls = re.findall("(\d*)", price_result)
-            price = int("".join(price_str_ls))
-            property_attributes_results = container.xpath('.//div[@class="c-pa-criterion"]/em/text()').extract()
+            ad_id = property.xpath('.//@id').extract_first()
+
+            url = property.xpath('.//a[@class="c-pa-link"]/@href').extract_first()
+
+            property_type = property.xpath('.//a[@class="c-pa-link"]/text()').extract_first().lower()
+
+            price_raw = property.xpath('.//span[@class="c-pa-cprice"]/text()').extract_first()
+            price = int("".join(re.findall("(\d*)", price_raw)))
+
+            attrs_results = property.xpath('.//div[@class="c-pa-criterion"]/em/text()').extract()
             attrs_dict = {}
-            for attr in property_attributes_results:
+            for attr in attrs_results:
                 res = re.search("(\d*)\s+(\w+)", attr)
                 attrs_dict[res.group(2)] = res.group(1)
 
-            results = {'id': ad_id, 'price': price, 'url': link, 'type': property_type}
-            for k,v in attrs_dict.items():
+            results = {'id': ad_id, 'price': price, 'url': url, 'type': property_type}
+            for k, v in attrs_dict.items():
                 results[k] = v
+
             yield results # DEBUG
             #yield Request(link, callback=self.parse_page, meta=results)
 
         # Extract next page url if exists
-        next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
-        if next_url:
-            yield Request(url=next_url, callback=self.parse)
-        else:
-            print("\n\tLAST PAGE REACHED")
+        #next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
+        #if next_url:
+        #    yield Request(url=next_url, callback=self.parse)
+        #else:
+        #    print("\n\tLAST PAGE REACHED")
 
     def parse_page(self, response):
         url = response.meta.get('url')
