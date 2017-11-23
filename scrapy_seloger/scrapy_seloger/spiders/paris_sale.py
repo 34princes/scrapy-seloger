@@ -2,18 +2,29 @@
 import scrapy
 from scrapy import Request
 import re
+from datetime import date
 """
 cd scrapy_seloger
-scrapy crawl paris_sale -o paris_sale.csv urls=https://www.urltoscrape1.com;https://www.urltoscrape2.com
+scrapy crawl paris_sale -o paris_sale.csv -a url=https://www.urltoscrape1.com -a max_pages=2
 """
 
 class ParisSaleSpider(scrapy.Spider):
     name = 'paris_sale'
-    allowed_domains = ['www.seloger.com']
-    
-    start_urls = ['http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750114&tri=initial&pxmax=305000']#['http://www.seloger.com/list.htm?org=advanced_search&idtt=2&idtypebien=1&cp=75&tri=initial&naturebien=1,2,4']
+    today = str(date.today())
+    page_counter = 0
+    property_counter = 1
+
+    def start_requests(self):
+        url = getattr(self, 'url', None)
+        yield scrapy.Request(url, self.parse)
 
     def parse(self, response):
+        # Limit the length of the scraping
+        max_pages = getattr(self, 'max_pages', None)
+        try:
+            max_pages = int(max_pages)
+        except:
+            max_pages = None
 
         # Total number of results
         response_num_results = response.xpath('//div[@class="title_nbresult"]/text()').extract_first()
@@ -22,7 +33,6 @@ class ParisSaleSpider(scrapy.Spider):
 
         num_results_ls = re.findall("(\d*)", response_num_results)
         num_results = int("".join(num_results_ls))
-        print("\tTotal number of results: {}".format(num_results))
 
         # Get listed properties
         properties = response.xpath(".//div[contains(@class, 'cartouche')]")
@@ -36,7 +46,10 @@ class ParisSaleSpider(scrapy.Spider):
             property_type = property.xpath('.//a[@class="c-pa-link"]/text()').extract_first().lower()
 
             price_raw = property.xpath('.//span[@class="c-pa-cprice"]/text()').extract_first()
-            price = int("".join(re.findall("(\d*)", price_raw)))
+            try:
+                price = int("".join(re.findall("(\d*)", price_raw)))
+            except:
+                price = None
 
             attrs_results = property.xpath('.//div[@class="c-pa-criterion"]/em/text()').extract()
             attrs_dict = {}
@@ -44,33 +57,55 @@ class ParisSaleSpider(scrapy.Spider):
                 res = re.search("(\d*)\s+(\w+)", attr)
                 attrs_dict[res.group(2)] = res.group(1)
 
-            results = {'id': ad_id, 'price': price, 'url': url, 'type': property_type}
+            results = {'id': ad_id, 'price': price, 'type': property_type, 'date': self.today}
             for k, v in attrs_dict.items():
                 results[k] = v
 
-            yield results # DEBUG
-            #yield Request(link, callback=self.parse_page, meta=results)
+            yield Request(url, callback=self.parse_page, meta=results)
 
         # Extract next page url if exists
-        #next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
-        #if next_url:
-        #    yield Request(url=next_url, callback=self.parse)
-        #else:
-        #    print("\n\tLAST PAGE REACHED")
+        next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
+        if next_url:  # Check if there is a next page
+            if not max_pages:
+                print("\tFetched {} out of {} total properties.".format(self.property_counter, num_results))
+                self.property_counter += 1
+                yield Request(url=next_url, callback=self.parse)
+            elif self.page_counter <= max_pages:
+                print("\tFetched {} out of {} total properties.".format(self.property_counter, num_results))
+                self.property_counter += 1
+                self.page_counter += 1
+                yield Request(url=next_url, callback=self.parse)
+            else:
+                print("\n\tPAGE LIMIT REACHED")
+                pass
+        else:
+            print("\n\tLAST PAGE REACHED")
 
     def parse_page(self, response):
-        url = response.meta.get('url')
-        ad_id = response.meta.get('id')
-        price = response.meta.get('price')
-        property_type = response.meta.get('type')
+
+        results = response.meta
 
         js = response.xpath('//script[@type="text/javascript"]/text()').extract()
         js_str = " ".join(js)
-        lat = re.search("""'mapCoordonneesLatitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
-        lng = re.search("""'mapCoordonneesLongitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+        try:
+            lat = re.search("""'mapCoordonneesLatitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+            lng = re.search("""'mapCoordonneesLongitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+            lat, lng = float(lat), float(lng)
+        except:  # if lat and lng fail, take the average of the coords of the bounding box
 
-        results = {'url': url, 'id': ad_id, 'price': price, 'type': property_type, 'latitude': lat, 'longitude': lng}
+            try:
+                lat1 = re.search("""'mapBoundingboxNortheastLatitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+                lat2 = re.search("""'mapBoundingboxSouthwestLatitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
 
-        print(results)
+                lng1 = re.search("""'mapBoundingboxNortheastLongitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+                lng2 = re.search("""'mapBoundingboxSouthwestLongitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
+                lat = round((float(lat1) + float(lat2)) / 2, 5)
+                lng = round((float(lng1) + float(lng2)) / 2, 5)
+            except:
+                lat, lng = None, None
+
+        results['latitude'] = lat
+        results['longitude'] = lng
+        [results.pop(k) for k in ['download_latency', 'download_slot', 'depth', 'download_timeout']]
 
         yield results
