@@ -14,9 +14,34 @@ class ParisSaleSpider(scrapy.Spider):
     page_counter = 0
     property_counter = 1
 
-    def start_requests(self):
-        url = getattr(self, 'url', None)
-        yield scrapy.Request(url, self.parse)
+    allowed_domains = ['www.seloger.com']
+
+    start_urls = ["http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750101&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750102&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750103&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750104&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750105&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750106&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750107&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750108&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750109&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750110&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750111&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750112&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750113&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750114&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750115&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750116&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750117&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750118&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750119&tri=initial",
+                  "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750120&tri=initial"
+                  ]
+
+
+    #def start_requests(self):
+        #url = getattr(self, 'url', None)
+        #yield scrapy.Request(url, self.parse)
 
     def parse(self, response):
 
@@ -89,7 +114,11 @@ class ParisSaleSpider(scrapy.Spider):
 
         results['latitude'] = lat
         results['longitude'] = lng
+
         [results.pop(k) for k in ['download_latency', 'download_slot', 'depth', 'download_timeout']]
-        results['sqm'] = results.pop('m²')
+
+        replace_column_names = {'m²': 'sqm', 'p': 'rooms', 'chb': 'bedrooms', 'balc': 'balcony', 'asc': 'lift'}
+        for k, v in replace_column_names.items():
+            results[v] = results.pop(k)
 
         yield results
