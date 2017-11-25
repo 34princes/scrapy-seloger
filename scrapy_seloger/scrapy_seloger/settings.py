@@ -92,3 +92,6 @@ DOWNLOADER_MIDDLEWARES = {
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+# Export csv fields
+FEED_EXPORT_FIELDS = ['id', 'type', 'price', 'sqm', 'rooms', 'bedrooms', 'balcony', 'lift', 'longitude', 'latitude', 'date']

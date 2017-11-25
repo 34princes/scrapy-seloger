@@ -36,7 +36,6 @@ class ParisSaleSpider(scrapy.Spider):
                   "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750118&tri=initial",
                   "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750119&tri=initial",
                   "http://www.seloger.com/list.htm?idtt=2&naturebien=1,2,4&idtypebien=1&ci=750120&tri=initial"
-
                   ]
 
     #def start_requests(self):
@@ -114,7 +113,11 @@ class ParisSaleSpider(scrapy.Spider):
 
         results['latitude'] = lat
         results['longitude'] = lng
+
         [results.pop(k) for k in ['download_latency', 'download_slot', 'depth', 'download_timeout']]
-        results['sqm'] = results.pop('m²')
+
+        replace_column_names = {'m²': 'sqm', 'p': 'rooms', 'chb': 'bedrooms', 'balc': 'balcony', 'asc': 'lift'}
+        for k, v in replace_column_names.items():
+            results[v] = results.pop(k)
 
         yield results
