@@ -68,13 +68,15 @@ class ParisSaleSpider(scrapy.Spider):
             except:
                 price = None
 
+            location = property.xpath('.//div[@class="c-pa-city"]/text()').extract_first()
+
             attrs_results = property.xpath('.//div[@class="c-pa-criterion"]/em/text()').extract()
             attrs_dict = {'chb': None, 'p': None, 'asc': 0, 'balc': 0}
             for attr in attrs_results:
                 res = re.search("(\d*)\s+(\w+)", attr)
                 attrs_dict[res.group(2)] = res.group(1)
 
-            results = {'id': ad_id, 'price': price, 'type': property_type, 'date': self.today}
+            results = {'id': ad_id, 'price': price, 'type': property_type, 'date': self.today, 'url': url, 'real_coords': True, 'location': location}
             for k, v in attrs_dict.items():
                 results[k] = v
 
@@ -108,6 +110,9 @@ class ParisSaleSpider(scrapy.Spider):
                 lng2 = re.search("""'mapBoundingboxSouthwestLongitude'.*\n.*value:\s"(\d*.\d*)""", js_str).group(1)
                 lat = round((float(lat1) + float(lat2)) / 2, 5)
                 lng = round((float(lng1) + float(lng2)) / 2, 5)
+
+                results['real_coords'] = False
+
             except:
                 lat, lng = None, None
 

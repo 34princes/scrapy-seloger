@@ -22,15 +22,15 @@ NEWSPIDER_MODULE = 'scrapy_seloger.spiders'
 ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-CONCURRENT_REQUESTS = 5
+CONCURRENT_REQUESTS = 10
 
 # Configure a delay for requests for the same website (default: 0)
 # See http://scrapy.readthedocs.org/en/latest/topics/settings.html#download-delay
 # See also autothrottle settings and docs
-DOWNLOAD_DELAY = 3
+DOWNLOAD_DELAY = 4
 # The download delay setting will honor only one of:
 #CONCURRENT_REQUESTS_PER_DOMAIN = 16
-CONCURRENT_REQUESTS_PER_IP = 5
+CONCURRENT_REQUESTS_PER_IP = 10
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -94,4 +94,4 @@ DOWNLOADER_MIDDLEWARES = {
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 # Export csv fields
-FEED_EXPORT_FIELDS = ['id', 'type', 'price', 'sqm', 'rooms', 'bedrooms', 'balcony', 'lift', 'longitude', 'latitude', 'date']
+FEED_EXPORT_FIELDS = ['id', 'type', 'location','price', 'sqm', 'rooms', 'bedrooms', 'balcony', 'lift', 'longitude', 'latitude', 'real_coords', 'url','date']
