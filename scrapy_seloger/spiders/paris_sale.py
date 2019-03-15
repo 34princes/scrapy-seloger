@@ -80,12 +80,12 @@ class ParisSaleSpider(scrapy.Spider):
             for k, v in attrs_dict.items():
                 results[k] = v
 
-            yield Request(url, callback=self.parse_page, meta=results)
+            yield Request(response.urljoin(url), callback=self.parse_page, meta=results)
 
         # Extract next page url if exists
         next_url = response.xpath('//a[@class="pagination-next"]/@href').extract_first()
         if next_url:
-            yield Request(url=next_url, callback=self.parse)
+            yield Request(response.urljoin(next_url), callback=self.parse)
         else:
             print("\n\tLAST PAGE REACHED")
 
